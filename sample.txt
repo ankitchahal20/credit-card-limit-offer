@@ -1,0 +1,27 @@
+
+
+create a new account
+
+Account1 
+
+accoutid 1
+customerid 123
+account_limit 10000
+per_transaction_limit 2000
+last_account_limit 10000
+last_per_transaction_limit 2000
+
+createOfferLimit (accout_limit = 5000) BadRequest
+createOfferLimit (per_transaction_limit = 1000) BadRequest
+createOfferLimit (accout_limit = 50000) = > statusPending offerActiviationDate: 22/08  offerExpiryDate 30/08, newlimit=50000
+
+listOfferLimit (accoutID) => accountid 1
+listOfferLimit (accoutID, 24/08) => accountid 1
+listOfferLimit (accoutID, 30/08) => accountid 1
+
+listOfferLimit (accoutID, 31/08) => 0 Zeros
+
+UpdateLimitStatus(accountid, ACCEPTED) => 1 ) go to offer_limit table set status to ACCEPTED and get the limit_tyoe and new_limit
+                                          2 ) go to account table and and based on the limit_type set the new_limit to limit_type.
+
+UpdateLimitStatus(accountid, REJECTED) => 1 ) go to offer_limit table set status to REJECTED

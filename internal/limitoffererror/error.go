@@ -1,4 +1,4 @@
-package error
+package limitoffererror
 
 type CreditCardError struct {
 	Code    int    `json:"code"`

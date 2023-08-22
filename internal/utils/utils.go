@@ -2,7 +2,7 @@ package utils
 
 import (
 	"github.com/ankit/project/credit-card-offer-limit/internal/constants"
-	"github.com/ankit/project/credit-card-offer-limit/internal/error"
+	"github.com/ankit/project/credit-card-offer-limit/internal/limitoffererror"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -15,7 +15,7 @@ func InitLogClient() {
 
 func RespondWithError(c *gin.Context, statusCode int, message string) {
 
-	c.AbortWithStatusJSON(statusCode, error.CreditCardError{
+	c.AbortWithStatusJSON(statusCode, limitoffererror.CreditCardError{
 		Trace:   c.Request.Header.Get(constants.TransactionID),
 		Code:    statusCode,
 		Message: message,

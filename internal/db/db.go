@@ -6,11 +6,17 @@ import (
 	"log"
 
 	"github.com/ankit/project/credit-card-offer-limit/internal/config"
+	"github.com/ankit/project/credit-card-offer-limit/internal/limitoffererror"
+	"github.com/ankit/project/credit-card-offer-limit/internal/models"
+	"github.com/gin-gonic/gin"
 )
 
 type postgres struct{ db *sql.DB }
 
-type CreditCardLimitOfferService interface{}
+type CreditCardLimitOfferService interface {
+	CreateAccount(ctx *gin.Context, accountInfo models.Account)  *limitoffererror.CreditCardError
+	GetAccount(ctx *gin.Context, accountID string) (models.Account, *limitoffererror.CreditCardError)
+}
 
 func New() (postgres, error) {
 	cfg := config.GetConfig()

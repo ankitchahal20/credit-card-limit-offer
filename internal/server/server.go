@@ -23,7 +23,7 @@ func registerCreateAccountEndPoints(handler gin.IRoutes) {
 
 // Registering the GetAccount EndPoint
 func registerGetAccountEndPoints(handler gin.IRoutes) {
-	handler.GET(constants.ForwardSlash+strings.Join([]string{constants.ForwardSlash, constants.GetAccount}, constants.ForwardSlash), service.GetAccount())
+	handler.GET(constants.ForwardSlash+strings.Join([]string{constants.ForwardSlash, constants.GetAccount, constants.Colon + constants.AccountID}, constants.ForwardSlash), service.GetAccount())
 }
 
 func Start() {
