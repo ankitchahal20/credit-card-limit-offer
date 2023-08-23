@@ -29,7 +29,7 @@ func CreateAccount() func(ctx *gin.Context) {
 			
 			errMessage := "one of the following account limit, last account limit, per transaction limit or last per transaction limit field is missing while creating an account"
 			utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
-			return	
+			return
 		}
 
 		createdAccount, err := creditCardLimitOfferClient.createAccount(ctx, accountInfo)
@@ -53,6 +53,16 @@ func CreateAccount() func(ctx *gin.Context) {
 func (service *CreditCardLimitOfferService) createAccount(ctx *gin.Context, accountInfo models.Account) (models.Account, *limitoffererror.CreditCardError) {
 	txid := ctx.Request.Header.Get(constants.TransactionID)
 	
+	// check if per transaction limit is greater than account limit
+	if *accountInfo.PerTransactionLimit > *accountInfo.AccountLimit {
+		utils.Logger.Info(fmt.Sprintf("per transaction limit can not be greater than account limit, txid : %v", txid))
+		return models.Account{},  &limitoffererror.CreditCardError{
+			Code:    http.StatusBadRequest,
+			Message: "per transaction limit can not be greater than account limit",
+			Trace:   txid,
+		}
+	}
+
 	// generate the accountID and customerID from uuid package and set in the the accountInfo
 	accountID := uuid.New().String()
 	customerID := uuid.New().String()
@@ -63,6 +73,7 @@ func (service *CreditCardLimitOfferService) createAccount(ctx *gin.Context, acco
 	accountCreationTime := time.Now().UTC()
 	accountInfo.AccountLimitUpdateTime = accountCreationTime
 	accountInfo.PerTransactionLimitUpdateTime = accountCreationTime
+
 	utils.Logger.Info(fmt.Sprintf("calling db layer for account creation, txid : %v", txid))
 	err := service.repo.CreateAccount(ctx, accountInfo)
 	if err != nil {
@@ -94,7 +105,6 @@ func GetAccount() func(ctx *gin.Context) {
 		}
 
 		ctx.JSON(http.StatusOK, fetchedAccount)
-
 		ctx.Writer.WriteHeader(http.StatusOK)
 	}
 }

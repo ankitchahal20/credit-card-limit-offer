@@ -26,12 +26,30 @@ func registerGetAccountEndPoints(handler gin.IRoutes) {
 	handler.GET(constants.ForwardSlash+strings.Join([]string{constants.ForwardSlash, constants.GetAccount, constants.Colon + constants.AccountID}, constants.ForwardSlash), service.GetAccount())
 }
 
+// Registering the CreateLimitOffer EndPoint
+func registerCreateLimitOfferEndpoints(handler gin.IRoutes) {
+	handler.POST(constants.ForwardSlash+strings.Join([]string{constants.ForwardSlash, constants.CreateLimitOffer}, constants.ForwardSlash), service.CreateLimitOffer())
+}
+
+// Registering the GetAccount EndPoint
+func registerListActiveLimitOffersEndpoints(handler gin.IRoutes) {
+	handler.GET(constants.ForwardSlash+strings.Join([]string{constants.ForwardSlash, constants.ListActiveLimitOffers}, constants.ForwardSlash), service.ListActiveLimitOffers())
+}
+
+// Registering the UpdateLimitOfferStatus EndPoint
+func registerUpdateLimitOfferStatusEndpoints(handler gin.IRoutes) {
+	handler.PATCH(constants.ForwardSlash+strings.Join([]string{constants.ForwardSlash, constants.UpdateLimitOfferStatus}, constants.ForwardSlash), service.UpdateLimitOfferStatus())
+}
+
 func Start() {
 	plainHandler := gin.New()
 
 	creditCardHandler := plainHandler.Group(constants.ForwardSlash + constants.Version).Use(gin.Recovery())
 	registerCreateAccountEndPoints(creditCardHandler)
 	registerGetAccountEndPoints(creditCardHandler)
+	registerCreateLimitOfferEndpoints(creditCardHandler)
+	registerListActiveLimitOffersEndpoints(creditCardHandler)
+	registerUpdateLimitOfferStatusEndpoints(creditCardHandler)
 
 	cfg := config.GetConfig()
 	srv := &http.Server{

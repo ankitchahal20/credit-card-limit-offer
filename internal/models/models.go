@@ -19,11 +19,11 @@ const (
 
 type LimitOffer struct {
 	ID                	string      `json:"id"`
-	AccountID         	string      `json:"account_id"`
-	LimitType         	LimitType   `json:"limit_type"`
-	NewLimit          	int 		`json:"new_limit"`
-	OfferActivationTime time.Time   `json:"offer_activation"`
-	OfferExpiryTime   	time.Time   `json:"offer_expiry_time"`
+	AccountID         	*string     `json:"account_id"`
+	LimitType         	*LimitType  `json:"limit_type"`
+	NewLimit          	*int 		`json:"new_limit"`
+	OfferActivationTime *time.Time  `json:"offer_activation_time"`
+	OfferExpiryTime   	*time.Time  `json:"offer_expiry_time"`
 	Status            	OfferStatus `json:"status"`
 }
 
@@ -38,3 +38,12 @@ type Account struct {
 	PerTransactionLimitUpdateTime time.Time `json:"per_transaction_limit_update_time,omitempty"`
 }
 
+type ActiveLimitOffer struct {
+	AccountID  string 	  `json:"account_id"`
+	ActiveDate *time.Time `json:"active_date,omitempty"`
+}
+
+type UpdateLimitOfferStatus struct {
+	LimitOfferID string `json:"limit_offer_id"`
+	Status 		 string `json:"status"`
+}

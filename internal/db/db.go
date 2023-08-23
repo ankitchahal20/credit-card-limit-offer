@@ -16,6 +16,9 @@ type postgres struct{ db *sql.DB }
 type CreditCardLimitOfferService interface {
 	CreateAccount(ctx *gin.Context, accountInfo models.Account)  *limitoffererror.CreditCardError
 	GetAccount(ctx *gin.Context, accountID string) (models.Account, *limitoffererror.CreditCardError)
+	CreateLimitOffer(ctx *gin.Context, limitOffer models.LimitOffer) *limitoffererror.CreditCardError
+	ListActiveLimitOffers(ctx *gin.Context, limitOffer models.ActiveLimitOffer) ([]models.LimitOffer, *limitoffererror.CreditCardError)
+	UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatus models.UpdateLimitOfferStatus) ([]models.LimitOffer, *limitoffererror.CreditCardError)
 }
 
 func New() (postgres, error) {
