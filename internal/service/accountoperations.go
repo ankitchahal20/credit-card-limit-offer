@@ -23,27 +23,18 @@ func CreateAccount() func(ctx *gin.Context) {
 		if err := ctx.ShouldBindBodyWith(&accountInfo, binding.JSON); err == nil {
 			utils.Logger.Info(fmt.Sprintf("user request for account creation is unmarshalled successfully, txid : %v", txid))
 
-		if accountInfo.AccountLimit == nil || accountInfo.LastAccountLimit == nil || accountInfo.PerTransactionLimit == nil ||
-			accountInfo.LastPerTransactionLimit == nil {
-			utils.Logger.Error(fmt.Sprintf("one of the following account limit, last account limit, per transaction limit or last per transaction limit field is missing while creating an account, txid : %v", txid))
-			
-			errMessage := "one of the following account limit, last account limit, per transaction limit or last per transaction limit field is missing while creating an account"
-			utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
-			return
-		}
+			createdAccount, err := creditCardLimitOfferClient.createAccount(ctx, accountInfo)
+			if err != nil {
+				utils.RespondWithError(ctx, err.Code, err.Message)
+				return
+			}
 
-		createdAccount, err := creditCardLimitOfferClient.createAccount(ctx, accountInfo)
-		if err != nil {
-			utils.RespondWithError(ctx, err.Code, err.Message)
-			return
-		}
+			ctx.JSON(http.StatusOK, map[string]string{
+				"account_id": createdAccount.AccountID,
+				"customer_id": createdAccount.CustomerID,
+			})
 
-		ctx.JSON(http.StatusOK, map[string]string{
-			"account_id": createdAccount.AccountID,
-			"customer_id": createdAccount.CustomerID,
-		})
-
-		ctx.Writer.WriteHeader(http.StatusOK)
+			ctx.Writer.WriteHeader(http.StatusOK)
 		} else {
 			ctx.JSON(http.StatusBadRequest, gin.H{"Unable to marshal the request body": err.Error()})
 		}
@@ -91,12 +82,6 @@ func GetAccount() func(ctx *gin.Context) {
 		txid := ctx.Request.Header.Get(constants.TransactionID)
 		accountID := ctx.Param(constants.AccountID)
 		utils.Logger.Info(fmt.Sprintf("request received for get %v account, txid : %v", accountID, txid))
-		_, erraccountUUID := uuid.Parse(accountID)
-		if erraccountUUID != nil {
-			utils.Logger.Error(fmt.Sprintf("Error parsing the %v accountID, txid : %v", accountID, txid))
-			utils.RespondWithError(ctx, http.StatusBadRequest, constants.InvalidAccountID)
-			return
-		}
 		utils.Logger.Info(fmt.Sprintf("calling service layer for getting %v accountID, txid : %v", accountID, txid))
 		fetchedAccount, err := creditCardLimitOfferClient.getAccount(ctx, accountID)
 		if err != nil {

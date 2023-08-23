@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/pelletier/go-toml"
@@ -44,7 +45,8 @@ func GetConfig() GlobalConfig {
 
 // Loading the values from default.toml and assigning them as part of GlobalConfig struct
 func InitGlobalConfig() error {
-	config, err := toml.LoadFile("./config/defaults.toml")
+	config, err := toml.LoadFile("./../config/defaults.toml")
+	fmt.Println("Err : ", err)
 	if err != nil {
 		log.Printf("Error while loading defaults.toml file : %v ", err)
 		return err

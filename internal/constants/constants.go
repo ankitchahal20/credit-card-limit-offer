@@ -17,7 +17,9 @@ const (
 	InvalidBody   = "invalid value for body"
 	InvalidAccountID  = "invalid value for accountID"
 	InvalidOfferLimitID  = "invalid value for offer limit id"
-	Group         = "my-group"
+	InvalidBodyCreateAccount = "invalid create account request body"
+	InvalidBodyCreateLimitOffer = "invalid create limit offer request body"
+	InvalidBodyUpdateLimitOfferStatus = "invalid update limit offer status request body"
 
 	//http
 	Accept          = "Accept"

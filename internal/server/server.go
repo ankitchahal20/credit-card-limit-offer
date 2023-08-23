@@ -12,6 +12,7 @@ import (
 
 	"github.com/ankit/project/credit-card-offer-limit/internal/config"
 	"github.com/ankit/project/credit-card-offer-limit/internal/constants"
+	"github.com/ankit/project/credit-card-offer-limit/internal/middleware"
 	"github.com/ankit/project/credit-card-offer-limit/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -44,7 +45,8 @@ func registerUpdateLimitOfferStatusEndpoints(handler gin.IRoutes) {
 func Start() {
 	plainHandler := gin.New()
 
-	creditCardHandler := plainHandler.Group(constants.ForwardSlash + constants.Version).Use(gin.Recovery())
+	creditCardHandler := plainHandler.Group(constants.ForwardSlash + constants.Version).Use(gin.Recovery()).
+	Use(middleware.ValidateInputRequest())
 	registerCreateAccountEndPoints(creditCardHandler)
 	registerGetAccountEndPoints(creditCardHandler)
 	registerCreateLimitOfferEndpoints(creditCardHandler)

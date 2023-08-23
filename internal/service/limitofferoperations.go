@@ -23,26 +23,17 @@ func CreateLimitOffer() func(ctx *gin.Context) {
 		if err := ctx.ShouldBindBodyWith(&limitOffer, binding.JSON); err == nil {
 			utils.Logger.Info(fmt.Sprintf("user request for account creation is unmarshalled successfully, txid : %v", txid))
 
-		if limitOffer.LimitType == nil || limitOffer.AccountID == nil || limitOffer.NewLimit == nil ||
-			limitOffer.OfferActivationTime == nil || limitOffer.OfferExpiryTime == nil {
-			utils.Logger.Error(fmt.Sprintf("one of the following account LimitType, AccountID, NewLimit or OfferActivationTime or OfferExpiryTime field is missing while creating an account, txid : %v", txid))
-			
-			errMessage := "one of the following account limit, last account limit, per transaction limit or last per transaction limit field is missing while creating an account"
-			utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
-			return	
-		}
+			offerLimitID, err := creditCardLimitOfferClient.createLimitOffer(ctx, limitOffer)
+			if err != nil {
+				utils.RespondWithError(ctx, err.Code, err.Message)
+				return
+			}
 
-		offerLimitID, err := creditCardLimitOfferClient.createLimitOffer(ctx, limitOffer)
-		if err != nil {
-			utils.RespondWithError(ctx, err.Code, err.Message)
-			return
-		}
+			ctx.JSON(http.StatusOK, map[string]string{
+				"offer_limit_id": offerLimitID,
+			})
 
-		ctx.JSON(http.StatusOK, map[string]string{
-			"offer_limit_id": offerLimitID,
-		})
-
-		ctx.Writer.WriteHeader(http.StatusOK)
+			ctx.Writer.WriteHeader(http.StatusOK)
 		} else {
 			ctx.JSON(http.StatusBadRequest, gin.H{"Unable to marshal the request body": err.Error()})
 		}
@@ -95,24 +86,16 @@ func ListActiveLimitOffers() func(ctx *gin.Context) {
 		var activeLimitOffer models.ActiveLimitOffer
 		if err := ctx.ShouldBindBodyWith(&activeLimitOffer, binding.JSON); err == nil {
 			utils.Logger.Info(fmt.Sprintf("received request for account creation is unmarshalled successfully, txid : %v", txid))
-		
-		if activeLimitOffer.AccountID == "" {
-			utils.Logger.Error(fmt.Sprintf("account is missing, txid : %v", txid))
-			
-			errMessage := "account is missing to list all active limit offers"
-			utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
-			return
-		}
 
-		activeLimitOffers, err := creditCardLimitOfferClient.listActiveLimitOffers(ctx, activeLimitOffer)
-		if err != nil {
-			utils.RespondWithError(ctx, err.Code, err.Message)
-			return
-		}
+			activeLimitOffers, err := creditCardLimitOfferClient.listActiveLimitOffers(ctx, activeLimitOffer)
+			if err != nil {
+				utils.RespondWithError(ctx, err.Code, err.Message)
+				return
+			}
 		
-		ctx.JSON(http.StatusOK, activeLimitOffers)
+			ctx.JSON(http.StatusOK, activeLimitOffers)
 
-		ctx.Writer.WriteHeader(http.StatusOK)
+			ctx.Writer.WriteHeader(http.StatusOK)
 		} else {
 			ctx.JSON(http.StatusBadRequest, gin.H{"Unable to marshal the request body": err.Error()})
 		}
@@ -145,41 +128,15 @@ func UpdateLimitOfferStatus() func(ctx *gin.Context) {
 		var updateLimitOfferStatus models.UpdateLimitOfferStatus
 		if err := ctx.ShouldBindBodyWith(&updateLimitOfferStatus, binding.JSON); err == nil {
 			utils.Logger.Info(fmt.Sprintf("received request for account creation is unmarshalled successfully, txid : %v", txid))
+
+			activeLimitOffers, err := creditCardLimitOfferClient.updateLimitOfferStatus(ctx, updateLimitOfferStatus)
+			if err != nil {
+				utils.RespondWithError(ctx, err.Code, err.Message)
+				return
+			}
 		
-		if updateLimitOfferStatus.LimitOfferID == "" {
-			utils.Logger.Error(fmt.Sprintf("limit offer id is missing, txid : %v", txid))
-			
-			errMessage := "limit offer id is missing"
-			utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
-			return
-		}
-
-		_, errlimitOfferUUID := uuid.Parse(updateLimitOfferStatus.LimitOfferID)
-		if errlimitOfferUUID != nil {
-			utils.Logger.Error(fmt.Sprintf("Error parsing the %v limitOfferID, txid : %v", updateLimitOfferStatus.LimitOfferID, txid))
-			utils.RespondWithError(ctx, http.StatusBadRequest, constants.InvalidOfferLimitID)
-			return
-		}
-
-		switch updateLimitOfferStatus.Status{
-		case string(models.Accepted), string(models.Rejected):
-		default:
-			utils.Logger.Error(fmt.Sprintf("invalid status is provided, txid : %v", txid))
-			
-			errMessage := "received status is not supported"
-			utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
-			return
-		}
-
-		activeLimitOffers, err := creditCardLimitOfferClient.updateLimitOfferStatus(ctx, updateLimitOfferStatus)
-		if err != nil {
-			utils.RespondWithError(ctx, err.Code, err.Message)
-			return
-		}
-		
-		ctx.JSON(http.StatusOK, activeLimitOffers)
-
-		ctx.Writer.WriteHeader(http.StatusOK)
+			ctx.JSON(http.StatusOK, activeLimitOffers)
+			ctx.Writer.WriteHeader(http.StatusOK)
 		} else {
 			ctx.JSON(http.StatusBadRequest, gin.H{"Unable to marshal the request body": err.Error()})
 		}

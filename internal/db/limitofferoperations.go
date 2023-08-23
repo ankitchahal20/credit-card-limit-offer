@@ -44,22 +44,44 @@ func (p postgres) CreateLimitOffer(ctx *gin.Context, limitOffer models.LimitOffe
 }
 
 func (p postgres) ListActiveLimitOffers(ctx *gin.Context, limitOffer models.ActiveLimitOffer) ([]models.LimitOffer, *limitoffererror.CreditCardError) {
+	txid := ctx.Request.Header.Get(constants.TransactionID)
+
+	// Check if the account with the provided account_id exists
+	var accountExists bool
+	accountCheckQuery := `SELECT EXISTS (SELECT 1 FROM account WHERE account_id = $1)`
+	if err := p.db.QueryRow(accountCheckQuery, limitOffer.AccountID).Scan(&accountExists); err != nil {
+		return nil, &limitoffererror.CreditCardError{
+			Code:    http.StatusInternalServerError,
+			Message: "error checking account existence",
+			Trace:   txid,
+		}
+	}
+
+	if !accountExists {
+		return nil, &limitoffererror.CreditCardError{
+			Code:    http.StatusNotFound,
+			Message: "account not found",
+			Trace:   txid,
+		}
+	}
+
 	query := `
 		SELECT id, account_id, limit_type, new_limit, offer_activation_time, offer_expiry_time, status
 		FROM limit_offer
 		WHERE account_id = $1 AND status = $2 AND offer_activation_time <= $3 AND offer_expiry_time >= $4`
 
+	activeOffers := []models.LimitOffer{}
 	rows, err := p.db.Query(query, limitOffer.AccountID, models.Pending, limitOffer.ActiveDate, limitOffer.ActiveDate)
 	if err != nil {
 		// Handle the error if the query fails
 		return nil, &limitoffererror.CreditCardError{
 			Code:    http.StatusInternalServerError,
 			Message: "unable to retrieve active limit offers",
-			Trace:   ctx.Request.Header.Get(constants.TransactionID),
+			Trace:   txid,
 		}
 	}
 	defer rows.Close()
-	activeOffers := []models.LimitOffer{}
+
 	for rows.Next() {
 		var offer models.LimitOffer
 		err := rows.Scan(
@@ -71,7 +93,7 @@ func (p postgres) ListActiveLimitOffers(ctx *gin.Context, limitOffer models.Acti
 			return nil, &limitoffererror.CreditCardError{
 				Code:    http.StatusInternalServerError,
 				Message: "error scanning limit offer rows",
-				Trace:   ctx.Request.Header.Get(constants.TransactionID),
+				Trace:   txid,
 			}
 		}
 		activeOffers = append(activeOffers, offer)
@@ -79,6 +101,7 @@ func (p postgres) ListActiveLimitOffers(ctx *gin.Context, limitOffer models.Acti
 
 	return activeOffers, nil
 }
+
 
 func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatus models.UpdateLimitOfferStatus) ([]models.LimitOffer, *limitoffererror.CreditCardError){
 	txid := ctx.Request.Header.Get(constants.TransactionID)
