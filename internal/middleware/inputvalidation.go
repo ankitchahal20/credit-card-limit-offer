@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ankit/project/credit-card-offer-limit/internal/constants"
 	"github.com/ankit/project/credit-card-offer-limit/internal/models"
@@ -28,6 +29,7 @@ func ValidateInputRequest() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// get the transactionID from headers if not present create a new.
 		transactionID := getTransactionID(ctx)
+		fmt.Printf("TimeStamp : %v", time.Now().UTC)
 		path := ctx.Request.URL.String()
 		switch {
 		case strings.Contains(path, constants.CreateAccount):
@@ -77,6 +79,20 @@ func validateCreateAccountInput(ctx *gin.Context, txid string){
 	if accountInfo.LastPerTransactionLimit == nil {
 		utils.Logger.Error(fmt.Sprintf("last_per_transaction_limit field is missing while creating an account, txid : %v", txid))
 		errMessage := "last_per_transaction_limit field is missing"
+		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
+		return
+	}
+
+	if *accountInfo.AccountLimit < *accountInfo.LastAccountLimit {
+		utils.Logger.Error(fmt.Sprintf("amount_limit field should be greater than or equal to last_amount_limit while creating an account, txid : %v", txid))
+		errMessage := "amount_limit is less than last_amount_limit"
+		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
+		return
+	}
+
+	if *accountInfo.PerTransactionLimit < *accountInfo.LastPerTransactionLimit {
+		utils.Logger.Error(fmt.Sprintf("per_transaction_limit field should be greater than or equal to last_per_transaction_limit while creating an account, txid : %v", txid))
+		errMessage := "per_transaction_limit is less than last_per_transaction_limit"
 		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
 		return
 	}

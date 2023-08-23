@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,29 +15,75 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (p postgres) CreateLimitOffer(ctx *gin.Context, limitOffer models.LimitOffer) *limitoffererror.CreditCardError {
+func (p postgres) IsLimitOfferExists(ctx *gin.Context, limitOffer models.LimitOffer) (bool, string, *limitoffererror.CreditCardError) {
 	txid := ctx.Request.Header.Get(constants.TransactionID)
-	
+
 	query := `
-		INSERT INTO limit_offer(id, account_id, limit_type, new_limit, offer_activation_time, offer_expiry_time, status) 
-		VALUES($1, $2, $3, $4, $5, $6, $7)`
-	
-	_, err := p.db.Exec(query, limitOffer.ID, limitOffer.AccountID, limitOffer.LimitType, limitOffer.NewLimit,
-		limitOffer.OfferActivationTime, limitOffer.OfferExpiryTime, limitOffer.Status)
-	
+		SELECT id
+		FROM limit_offer
+		WHERE account_id = $1 AND limit_type = $2 AND status = $3
+		LIMIT 1`
+
+	var offerLimitId sql.NullString
+	//var offerStatusId sql.NullString
+	err := p.db.QueryRow(query, limitOffer.AccountID, limitOffer.LimitType, models.Pending).Scan(&offerLimitId)
 	if err != nil {
-		utils.Logger.Error(fmt.Sprintf("error while running insert query, txid : %v", txid))
-		if strings.Contains(err.Error(), "duplicate key value") {
+		if err == sql.ErrNoRows {
+			return false, "", nil
+		}
+
+		utils.Logger.Error(fmt.Sprintf("error querying limit offer existence from db, txid: %v, error: %v", txid, err))
+		return false, "", &limitoffererror.CreditCardError{
+			Code:    http.StatusInternalServerError,
+			Message: "error checking limit offer existence",
+			Trace:   txid,
+		}
+	}
+
+	if offerLimitId.Valid {
+		return true, offerLimitId.String, nil
+	}
+
+	return false, "", nil
+}
+
+func (p postgres) CreateLimitOffer(ctx *gin.Context, limitOffer models.LimitOffer, isLimitOfferExsits bool) *limitoffererror.CreditCardError {
+	txid := ctx.Request.Header.Get(constants.TransactionID)
+
+	if isLimitOfferExsits {
+		fmt.Println("limitOffer.NewLimit, limitOffer.AccountID, limitOffer.LimitType :", *limitOffer.NewLimit, ":" ,*limitOffer.AccountID,":" , *limitOffer.LimitType)
+		_, err := p.db.Exec("UPDATE limit_offer SET new_limit = $1 WHERE account_id = $2 AND limit_type = $3", *limitOffer.NewLimit, *limitOffer.AccountID, *limitOffer.LimitType)
+		fmt.Println("err 3 ", err)
+		if err != nil {
+			log.Println("error updating limit offer status:", err)
 			return &limitoffererror.CreditCardError{
-				Trace:   ctx.Request.Header.Get(constants.TransactionID),
-				Code:    http.StatusBadRequest,
-				Message: "account already added",
+				Code:    http.StatusInternalServerError,
+				Message: "error while updating limit offer status",
+				Trace:   txid,
 			}
 		}
-		return &limitoffererror.CreditCardError{
-			Trace:   txid,
-			Code:    http.StatusInternalServerError,
-			Message: "unable to add offer limit info",
+	} else {
+		query := `
+			INSERT INTO limit_offer(id, account_id, limit_type, new_limit, offer_activation_time, offer_expiry_time, status) 
+			VALUES($1, $2, $3, $4, $5, $6, $7)`
+	
+		_, err := p.db.Exec(query, limitOffer.ID, limitOffer.AccountID, limitOffer.LimitType, limitOffer.NewLimit,
+			limitOffer.OfferActivationTime, limitOffer.OfferExpiryTime, limitOffer.Status)
+	
+		if err != nil {
+			utils.Logger.Error(fmt.Sprintf("error while running insert query, txid : %v", txid))
+			if strings.Contains(err.Error(), "duplicate key value") {
+				return &limitoffererror.CreditCardError{
+					Trace:   ctx.Request.Header.Get(constants.TransactionID),
+					Code:    http.StatusBadRequest,
+					Message: "account already added",
+				}
+			}
+			return &limitoffererror.CreditCardError{
+				Trace:   txid,
+				Code:    http.StatusInternalServerError,
+				Message: "unable to add offer limit info",
+			}
 		}
 	}
 	utils.Logger.Info(fmt.Sprintf("successfully added the offer limit entry in db, txid : %v", txid))
@@ -102,13 +149,32 @@ func (p postgres) ListActiveLimitOffers(ctx *gin.Context, limitOffer models.Acti
 	return activeOffers, nil
 }
 
-
-func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatus models.UpdateLimitOfferStatus) ([]models.LimitOffer, *limitoffererror.CreditCardError){
+func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatus models.UpdateLimitOfferStatus) *limitoffererror.CreditCardError {
 	txid := ctx.Request.Header.Get(constants.TransactionID)
+	
+	// Check if the account with the provided offer_limit_id exists
+	var offerLimitExists bool
+	offerLimitCheckQuery := `SELECT EXISTS (SELECT 1 FROM limit_offer WHERE id = $1)`
+	if err := p.db.QueryRow(offerLimitCheckQuery, updateLimitOfferStatus.LimitOfferID).Scan(&offerLimitExists); err != nil {
+		return &limitoffererror.CreditCardError{
+			Code:    http.StatusInternalServerError,
+			Message: "error checking account existence",
+			Trace:   txid,
+		}
+	}
+
+	if !offerLimitExists {
+		return &limitoffererror.CreditCardError{
+			Code:    http.StatusNotFound,
+			Message: "offer limit not found",
+			Trace:   txid,
+		}
+	}
+	
 	tx, err := p.db.Begin()
 	fmt.Println("err 1 ", err)
 	if err != nil {
-		return []models.LimitOffer{},  &limitoffererror.CreditCardError{
+		return &limitoffererror.CreditCardError{
 			Code:    http.StatusInternalServerError,
 			Message: "unable to begin transaction",
 			Trace:   txid,
@@ -127,9 +193,19 @@ func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatu
 		&limitOffer.Status,)
 	fmt.Println("err 2 ", err)
 	if err != nil {
-		return []models.LimitOffer{},  &limitoffererror.CreditCardError{
+		return &limitoffererror.CreditCardError{
 			Code:    http.StatusInternalServerError,
 			Message: "error while fetching limit offer details",
+			Trace:   txid,
+		}
+	}
+
+	isActiveOffer := limitOffer.OfferActivationTime.Before(time.Now().UTC()) && limitOffer.OfferExpiryTime.After(time.Now().UTC())
+	if !isActiveOffer {
+		// if not in range
+		return &limitoffererror.CreditCardError{
+			Code:    http.StatusNotFound,
+			Message: "limit offer already expired",
 			Trace:   txid,
 		}
 	}
@@ -140,7 +216,7 @@ func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatu
 	fmt.Println("err 3 ", err)
 	if err != nil {
 		log.Println("error updating limit offer status:", err)
-		return []models.LimitOffer{},  &limitoffererror.CreditCardError{
+		return &limitoffererror.CreditCardError{
 			Code:    http.StatusInternalServerError,
 			Message: "error while updating limit offer status",
 			Trace:   txid,
@@ -165,7 +241,7 @@ func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatu
 			fmt.Println("err 4 ", err)
 			if err != nil {
 				log.Println("error fetching account:", err)
-				return []models.LimitOffer{},  &limitoffererror.CreditCardError{
+				return &limitoffererror.CreditCardError{
 					Code:    http.StatusInternalServerError,
 					Message: "error while reteriving get account info",
 					Trace:   txid,
@@ -182,7 +258,7 @@ func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatu
 				accountInfo.LastAccountLimit, accountInfo.AccountLimit, accountInfo.AccountLimitUpdateTime, accountInfo.AccountID)
 				if err != nil {
 					log.Println("error updating account:", err)
-					return []models.LimitOffer{},  &limitoffererror.CreditCardError{
+					return &limitoffererror.CreditCardError{
 						Code:    http.StatusInternalServerError,
 						Message: "unable to update the account limit info in db",
 						Trace:   txid,
@@ -197,7 +273,7 @@ func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatu
 				accountInfo.LastPerTransactionLimit, accountInfo.PerTransactionLimit, accountInfo.PerTransactionLimitUpdateTime, accountInfo.AccountID)
 				if err != nil {
 					log.Println("error updating account:", err)
-					return []models.LimitOffer{},  &limitoffererror.CreditCardError{
+					return &limitoffererror.CreditCardError{
 						Code:    http.StatusInternalServerError,
 						Message: "unable to update the account limit info in db",
 						Trace:   txid,
@@ -206,7 +282,7 @@ func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatu
 			}
 
 	default:
-		return []models.LimitOffer{},  &limitoffererror.CreditCardError{
+		return &limitoffererror.CreditCardError{
 			Code:    http.StatusInternalServerError,
 			Message: "received status not supported",
 			Trace:   txid,
@@ -216,11 +292,50 @@ func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatu
 	err = tx.Commit()
 	if err != nil {
 		log.Println("error committing transaction:", err)
-		return []models.LimitOffer{},  &limitoffererror.CreditCardError{
+		return &limitoffererror.CreditCardError{
 			Code:    http.StatusInternalServerError,
 			Message: "unable to commit changes in db",
 			Trace:   txid,
 		}
 	}
-	return []models.LimitOffer{}, nil
+	return nil
+}
+
+func (p postgres) GetLimitOffer(ctx *gin.Context, offerLimitID string) (models.LimitOffer, *limitoffererror.CreditCardError){
+	txid := ctx.Request.Header.Get(constants.TransactionID)
+
+	scannedLimitOffer := models.LimitOffer{}
+
+	query := `SELECT * FROM limit_offer WHERE id=$1`
+	row := p.db.QueryRow(query, offerLimitID)
+
+	err := row.Scan(
+		&scannedLimitOffer.ID,
+		&scannedLimitOffer.AccountID,
+		&scannedLimitOffer.LimitType,
+		&scannedLimitOffer.NewLimit,
+		&scannedLimitOffer.OfferActivationTime,
+		&scannedLimitOffer.OfferExpiryTime,
+		&scannedLimitOffer.Status,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Handle case where no rows were found
+			return scannedLimitOffer, &limitoffererror.CreditCardError{
+				Code:    http.StatusNotFound,
+				Message: "limit offer not found",
+				Trace:   txid,
+			}
+		}
+
+		utils.Logger.Error(fmt.Sprintf("error while scanning account from db, txid : %v, error: %v", txid, err))
+		return scannedLimitOffer, &limitoffererror.CreditCardError{
+			Code:    http.StatusInternalServerError,
+			Message: "unable to get the limit offer",
+			Trace:   txid,
+		}
+	}
+
+	utils.Logger.Info(fmt.Sprintf("successfully fetched limit offer from db, txid : %v", txid))
+	return scannedLimitOffer, nil
 }

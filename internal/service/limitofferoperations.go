@@ -43,11 +43,16 @@ func CreateLimitOffer() func(ctx *gin.Context) {
 func (service *CreditCardLimitOfferService) createLimitOffer(ctx *gin.Context, limitOffer models.LimitOffer) (string, *limitoffererror.CreditCardError) {
 	txid := ctx.Request.Header.Get(constants.TransactionID)
 	utils.Logger.Info(fmt.Sprintf("calling db layer for fetching account %v info to get the existing limit, txid : %v", limitOffer.AccountID, txid))
+	
 	fetchedAccount, err := service.repo.GetAccount(ctx, *limitOffer.AccountID)
 	if err != nil {
 		return constants.EmptyString, err
 	}
-
+	isLimitOfferExsits, offerLimitID, err := service.repo.IsLimitOfferExists(ctx, limitOffer)
+	if err != nil {
+		return constants.EmptyString, err
+	}
+	fmt.Println("isLimitOfferExsits : ",isLimitOfferExsits)
 	var currentLimit int
 	if *limitOffer.LimitType == models.AccountLimit {
 		currentLimit = *fetchedAccount.AccountLimit
@@ -63,13 +68,18 @@ func (service *CreditCardLimitOfferService) createLimitOffer(ctx *gin.Context, l
 		}
 	}
 
-	// create the offer id
-	limitOffer.ID = uuid.New().String()
+	if !isLimitOfferExsits {
+		// create the offer id
+		limitOffer.ID = uuid.New().String()
+	} else {
+		limitOffer.ID = offerLimitID
+	}
+
 	limitOffer.Status = models.Pending
 
 	// if current limit is greater than existing limit for an account, then update the existing time with status as PENDING
 	utils.Logger.Info(fmt.Sprintf("calling db layer for creating limit offer for %v account, txid : %v", limitOffer.AccountID, txid))
-	err = service.repo.CreateLimitOffer(ctx, limitOffer)
+	err = service.repo.CreateLimitOffer(ctx, limitOffer, isLimitOfferExsits)
 	if err != nil {
 		utils.Logger.Info(fmt.Sprintf("received error from db layer while creating creating limit offer for %v account, txid : %v", limitOffer.AccountID, txid))
 		return constants.EmptyString, err
@@ -129,13 +139,13 @@ func UpdateLimitOfferStatus() func(ctx *gin.Context) {
 		if err := ctx.ShouldBindBodyWith(&updateLimitOfferStatus, binding.JSON); err == nil {
 			utils.Logger.Info(fmt.Sprintf("received request for account creation is unmarshalled successfully, txid : %v", txid))
 
-			activeLimitOffers, err := creditCardLimitOfferClient.updateLimitOfferStatus(ctx, updateLimitOfferStatus)
+			err := creditCardLimitOfferClient.updateLimitOfferStatus(ctx, updateLimitOfferStatus)
 			if err != nil {
 				utils.RespondWithError(ctx, err.Code, err.Message)
 				return
 			}
 		
-			ctx.JSON(http.StatusOK, activeLimitOffers)
+			ctx.JSON(http.StatusOK, nil)
 			ctx.Writer.WriteHeader(http.StatusOK)
 		} else {
 			ctx.JSON(http.StatusBadRequest, gin.H{"Unable to marshal the request body": err.Error()})
@@ -143,15 +153,34 @@ func UpdateLimitOfferStatus() func(ctx *gin.Context) {
 	}
 }
 
-func (service *CreditCardLimitOfferService) updateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatus models.UpdateLimitOfferStatus) ([]models.LimitOffer, *limitoffererror.CreditCardError) {
+func (service *CreditCardLimitOfferService) updateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatus models.UpdateLimitOfferStatus) *limitoffererror.CreditCardError {
 	txid := ctx.Request.Header.Get(constants.TransactionID)
 
-	utils.Logger.Info(fmt.Sprintf("calling db layer to update limit offer status account, txid : %v", txid))
-	fetchedAccount, err := service.repo.UpdateLimitOfferStatus(ctx, updateLimitOfferStatus)
+	limitOfferInfo, err := service.repo.GetLimitOffer(ctx, updateLimitOfferStatus.LimitOfferID)
 	if err != nil {
-		utils.Logger.Info(fmt.Sprintf("received error from db layer while updating limit offer status, txid : %v", txid))
-		return []models.LimitOffer{}, err
+		return err
+	}
+	fmt.Println("limitOfferInfo.Status : ", limitOfferInfo.Status, limitOfferInfo)
+	if limitOfferInfo.Status == models.Accepted {
+		return &limitoffererror.CreditCardError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "limit offer is already in accepted state",
+			Trace:   txid,
+		}
+	} else if limitOfferInfo.Status == models.Rejected {
+		return &limitoffererror.CreditCardError{
+			Code:    http.StatusUnprocessableEntity,
+			Message: "limit offer is already in rejected state",
+			Trace:   txid,
+		}
 	}
 
-	return fetchedAccount, nil
+	utils.Logger.Info(fmt.Sprintf("calling db layer to update limit offer status account, txid : %v", txid))
+	err = service.repo.UpdateLimitOfferStatus(ctx, updateLimitOfferStatus)
+	if err != nil {
+		utils.Logger.Info(fmt.Sprintf("received error from db layer while updating limit offer status, txid : %v", txid))
+		return err
+	}
+
+	return nil
 }
