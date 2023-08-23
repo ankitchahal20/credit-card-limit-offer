@@ -51,7 +51,7 @@ func (p postgres) CreateLimitOffer(ctx *gin.Context, limitOffer models.LimitOffe
 	txid := ctx.Request.Header.Get(constants.TransactionID)
 
 	if isLimitOfferExsits {
-		fmt.Println("limitOffer.NewLimit, limitOffer.AccountID, limitOffer.LimitType :", *limitOffer.NewLimit, ":" ,*limitOffer.AccountID,":" , *limitOffer.LimitType)
+		fmt.Println("limitOffer.NewLimit, limitOffer.AccountID, limitOffer.LimitType :", *limitOffer.NewLimit, ":", *limitOffer.AccountID, ":", *limitOffer.LimitType)
 		_, err := p.db.Exec("UPDATE limit_offer SET new_limit = $1 WHERE account_id = $2 AND limit_type = $3", *limitOffer.NewLimit, *limitOffer.AccountID, *limitOffer.LimitType)
 		fmt.Println("err 3 ", err)
 		if err != nil {
@@ -66,10 +66,10 @@ func (p postgres) CreateLimitOffer(ctx *gin.Context, limitOffer models.LimitOffe
 		query := `
 			INSERT INTO limit_offer(id, account_id, limit_type, new_limit, offer_activation_time, offer_expiry_time, status) 
 			VALUES($1, $2, $3, $4, $5, $6, $7)`
-	
+
 		_, err := p.db.Exec(query, limitOffer.ID, limitOffer.AccountID, limitOffer.LimitType, limitOffer.NewLimit,
 			limitOffer.OfferActivationTime, limitOffer.OfferExpiryTime, limitOffer.Status)
-	
+
 		if err != nil {
 			utils.Logger.Error(fmt.Sprintf("error while running insert query, txid : %v", txid))
 			if strings.Contains(err.Error(), "duplicate key value") {
@@ -151,7 +151,7 @@ func (p postgres) ListActiveLimitOffers(ctx *gin.Context, limitOffer models.Acti
 
 func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatus models.UpdateLimitOfferStatus) *limitoffererror.CreditCardError {
 	txid := ctx.Request.Header.Get(constants.TransactionID)
-	
+
 	// Check if the account with the provided offer_limit_id exists
 	var offerLimitExists bool
 	offerLimitCheckQuery := `SELECT EXISTS (SELECT 1 FROM limit_offer WHERE id = $1)`
@@ -170,7 +170,7 @@ func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatu
 			Trace:   txid,
 		}
 	}
-	
+
 	tx, err := p.db.Begin()
 	fmt.Println("err 1 ", err)
 	if err != nil {
@@ -190,7 +190,7 @@ func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatu
 		&limitOffer.NewLimit,
 		&limitOffer.OfferActivationTime,
 		&limitOffer.OfferExpiryTime,
-		&limitOffer.Status,)
+		&limitOffer.Status)
 	fmt.Println("err 2 ", err)
 	if err != nil {
 		return &limitoffererror.CreditCardError{
@@ -223,63 +223,63 @@ func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatu
 		}
 	}
 
-	switch limitOffer.Status{
+	switch limitOffer.Status {
 	case models.Rejected:
 		// if status is REJECTED, your work is done, no updation required in db.
 	case models.Accepted:
 		// if status is ACCEPTED, update limit values (current and last), as well as limit update date in the account object.
 		var accountInfo models.Account
-			accountQuery := `SELECT * FROM account WHERE account_id = $1`
-			err = tx.QueryRow(accountQuery, limitOffer.AccountID).Scan(&accountInfo.AccountID,
-				&accountInfo.CustomerID,
-				&accountInfo.AccountLimit,
-				&accountInfo.PerTransactionLimit,
-				&accountInfo.LastAccountLimit,
-				&accountInfo.LastPerTransactionLimit,
-				&accountInfo.AccountLimitUpdateTime,
-				&accountInfo.PerTransactionLimitUpdateTime,)
-			fmt.Println("err 4 ", err)
+		accountQuery := `SELECT * FROM account WHERE account_id = $1`
+		err = tx.QueryRow(accountQuery, limitOffer.AccountID).Scan(&accountInfo.AccountID,
+			&accountInfo.CustomerID,
+			&accountInfo.AccountLimit,
+			&accountInfo.PerTransactionLimit,
+			&accountInfo.LastAccountLimit,
+			&accountInfo.LastPerTransactionLimit,
+			&accountInfo.AccountLimitUpdateTime,
+			&accountInfo.PerTransactionLimitUpdateTime)
+		fmt.Println("err 4 ", err)
+		if err != nil {
+			log.Println("error fetching account:", err)
+			return &limitoffererror.CreditCardError{
+				Code:    http.StatusInternalServerError,
+				Message: "error while reteriving get account info",
+				Trace:   txid,
+			}
+		}
+
+		if *limitOffer.LimitType == models.AccountLimit {
+			accountInfo.LastAccountLimit = accountInfo.AccountLimit
+			accountInfo.AccountLimit = limitOffer.NewLimit
+			accountInfo.AccountLimitUpdateTime = time.Now().UTC()
+
+			// update the db
+			_, err = tx.Exec("UPDATE account SET last_account_limit = $1, account_limit = $2, account_limit_update_time = $3 WHERE account_id = $4",
+				accountInfo.LastAccountLimit, accountInfo.AccountLimit, accountInfo.AccountLimitUpdateTime, accountInfo.AccountID)
 			if err != nil {
-				log.Println("error fetching account:", err)
+				log.Println("error updating account:", err)
 				return &limitoffererror.CreditCardError{
 					Code:    http.StatusInternalServerError,
-					Message: "error while reteriving get account info",
+					Message: "unable to update the account limit info in db",
 					Trace:   txid,
 				}
 			}
 
-			if *limitOffer.LimitType == models.AccountLimit {
-				accountInfo.LastAccountLimit = accountInfo.AccountLimit
-				accountInfo.AccountLimit = limitOffer.NewLimit
-				accountInfo.AccountLimitUpdateTime = time.Now().UTC()
-
-				// update the db
-				_, err = tx.Exec("UPDATE account SET last_account_limit = $1, account_limit = $2, account_limit_update_time = $3 WHERE account_id = $4",
-				accountInfo.LastAccountLimit, accountInfo.AccountLimit, accountInfo.AccountLimitUpdateTime, accountInfo.AccountID)
-				if err != nil {
-					log.Println("error updating account:", err)
-					return &limitoffererror.CreditCardError{
-						Code:    http.StatusInternalServerError,
-						Message: "unable to update the account limit info in db",
-						Trace:   txid,
-					}
-				}
-
-			} else if *limitOffer.LimitType == models.PerTransactionLimit {
-				accountInfo.LastPerTransactionLimit = accountInfo.PerTransactionLimit
-				accountInfo.PerTransactionLimit = limitOffer.NewLimit
-				accountInfo.PerTransactionLimitUpdateTime = time.Now().UTC()
-				_, err = tx.Exec("UPDATE account SET last_per_transaction_limit = $1, per_transaction_limit = $2, per_transaction_limit_update_time = $3 WHERE account_id = $4",
+		} else if *limitOffer.LimitType == models.PerTransactionLimit {
+			accountInfo.LastPerTransactionLimit = accountInfo.PerTransactionLimit
+			accountInfo.PerTransactionLimit = limitOffer.NewLimit
+			accountInfo.PerTransactionLimitUpdateTime = time.Now().UTC()
+			_, err = tx.Exec("UPDATE account SET last_per_transaction_limit = $1, per_transaction_limit = $2, per_transaction_limit_update_time = $3 WHERE account_id = $4",
 				accountInfo.LastPerTransactionLimit, accountInfo.PerTransactionLimit, accountInfo.PerTransactionLimitUpdateTime, accountInfo.AccountID)
-				if err != nil {
-					log.Println("error updating account:", err)
-					return &limitoffererror.CreditCardError{
-						Code:    http.StatusInternalServerError,
-						Message: "unable to update the account limit info in db",
-						Trace:   txid,
-					}
+			if err != nil {
+				log.Println("error updating account:", err)
+				return &limitoffererror.CreditCardError{
+					Code:    http.StatusInternalServerError,
+					Message: "unable to update the account limit info in db",
+					Trace:   txid,
 				}
 			}
+		}
 
 	default:
 		return &limitoffererror.CreditCardError{
@@ -301,7 +301,7 @@ func (p postgres) UpdateLimitOfferStatus(ctx *gin.Context, updateLimitOfferStatu
 	return nil
 }
 
-func (p postgres) GetLimitOffer(ctx *gin.Context, offerLimitID string) (models.LimitOffer, *limitoffererror.CreditCardError){
+func (p postgres) GetLimitOffer(ctx *gin.Context, offerLimitID string) (models.LimitOffer, *limitoffererror.CreditCardError) {
 	txid := ctx.Request.Header.Get(constants.TransactionID)
 
 	scannedLimitOffer := models.LimitOffer{}

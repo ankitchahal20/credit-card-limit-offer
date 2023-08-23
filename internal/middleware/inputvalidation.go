@@ -49,7 +49,7 @@ func ValidateInputRequest() gin.HandlerFunc {
 	}
 }
 
-func validateCreateAccountInput(ctx *gin.Context, txid string){
+func validateCreateAccountInput(ctx *gin.Context, txid string) {
 	var accountInfo models.Account
 	err := ctx.ShouldBindBodyWith(&accountInfo, binding.JSON)
 	if err != nil {
@@ -63,19 +63,19 @@ func validateCreateAccountInput(ctx *gin.Context, txid string){
 		errMessage := "account_limit field is missing"
 		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
 		return
-	} 
-	if accountInfo.LastAccountLimit == nil{
+	}
+	if accountInfo.LastAccountLimit == nil {
 		utils.Logger.Error(fmt.Sprintf("last_account_limit field is missing while creating an account, txid : %v", txid))
 		errMessage := "last_account_limit field is missing"
 		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
 		return
-	} 
+	}
 	if accountInfo.PerTransactionLimit == nil {
 		utils.Logger.Error(fmt.Sprintf("per_transaction_limit field is missing while creating an account, txid : %v", txid))
 		errMessage := "per_transaction_limit field is missing"
 		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
 		return
-	} 
+	}
 	if accountInfo.LastPerTransactionLimit == nil {
 		utils.Logger.Error(fmt.Sprintf("last_per_transaction_limit field is missing while creating an account, txid : %v", txid))
 		errMessage := "last_per_transaction_limit field is missing"
@@ -98,7 +98,7 @@ func validateCreateAccountInput(ctx *gin.Context, txid string){
 	}
 }
 
-func validateGetAccountInput(ctx *gin.Context, txid string){
+func validateGetAccountInput(ctx *gin.Context, txid string) {
 	accountID := ctx.Param(constants.AccountID)
 	fmt.Println("accountID : ", accountID)
 	utils.Logger.Info(fmt.Sprintf("request received for get %v account, txid : %v", accountID, txid))
@@ -120,48 +120,48 @@ func validateCreateLimitOfferInput(ctx *gin.Context, txid string) {
 	}
 
 	if limitOffer.LimitType == nil {
-		utils.Logger.Error(fmt.Sprintf("limit_type field is missing while creating limit offer, txid : %v", txid))	
+		utils.Logger.Error(fmt.Sprintf("limit_type field is missing while creating limit offer, txid : %v", txid))
 		errMessage := "limit_type field is missing"
 		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
 		return
-	} 
+	}
 	if limitOffer.AccountID == nil {
-		utils.Logger.Error(fmt.Sprintf("account_id field is missing while creating limit offer, txid : %v", txid))	
+		utils.Logger.Error(fmt.Sprintf("account_id field is missing while creating limit offer, txid : %v", txid))
 		errMessage := "account_id field is missing"
 		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
 		return
 	}
 	if limitOffer.NewLimit == nil {
-		utils.Logger.Error(fmt.Sprintf("new_limit field is missing while creating limit offer, txid : %v", txid))	
+		utils.Logger.Error(fmt.Sprintf("new_limit field is missing while creating limit offer, txid : %v", txid))
 		errMessage := "new_limit field is missing"
 		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
 		return
 	}
 	if limitOffer.OfferActivationTime == nil {
-		utils.Logger.Error(fmt.Sprintf("offer_activation_time field is missing while creating limit offer, txid : %v", txid))	
+		utils.Logger.Error(fmt.Sprintf("offer_activation_time field is missing while creating limit offer, txid : %v", txid))
 		errMessage := "offer_activation_time field is missing"
 		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
 		return
 	}
 	if limitOffer.OfferExpiryTime == nil {
-		utils.Logger.Error(fmt.Sprintf("offer_expiry_time field is missing while creating limit offer, txid : %v", txid))	
+		utils.Logger.Error(fmt.Sprintf("offer_expiry_time field is missing while creating limit offer, txid : %v", txid))
 		errMessage := "offer_expiry_time field is missing"
 		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
-		return	
+		return
 	}
 	// offer_expiry_time field should be greater than offer_activation_time
 	isExpireTimeBeforeActivationTime := limitOffer.OfferExpiryTime.Before(*limitOffer.OfferActivationTime)
 	if isExpireTimeBeforeActivationTime {
-		utils.Logger.Error(fmt.Sprintf("offer_expiry_time field should be greater than offer_activation_time, txid : %v", txid))	
+		utils.Logger.Error(fmt.Sprintf("offer_expiry_time field should be greater than offer_activation_time, txid : %v", txid))
 		errMessage := "offer_expiry_time field should be greater than offer_activation_time"
 		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
 		return
 	}
 }
 
-func validateListActiveLimitOffersInput(ctx *gin.Context, txid string){
+func validateListActiveLimitOffersInput(ctx *gin.Context, txid string) {
 	var activeLimitOffer models.ActiveLimitOffer
-	err := ctx.ShouldBindBodyWith(&activeLimitOffer, binding.JSON) 
+	err := ctx.ShouldBindBodyWith(&activeLimitOffer, binding.JSON)
 	if err != nil {
 		utils.Logger.Error("error while unmarshaling the request field to list active limit offer data validation")
 		utils.RespondWithError(ctx, http.StatusBadRequest, constants.InvalidBody)
@@ -183,7 +183,7 @@ func validateListActiveLimitOffersInput(ctx *gin.Context, txid string){
 	}
 }
 
-func validateUpdateLimitOfferStatusInput(ctx *gin.Context, txid string){
+func validateUpdateLimitOfferStatusInput(ctx *gin.Context, txid string) {
 	var updateLimitOfferStatus models.UpdateLimitOfferStatus
 	err := ctx.ShouldBindBodyWith(&updateLimitOfferStatus, binding.JSON)
 	if err != nil {
@@ -192,7 +192,7 @@ func validateUpdateLimitOfferStatusInput(ctx *gin.Context, txid string){
 		return
 	}
 	utils.Logger.Info(fmt.Sprintf("received request for account creation is unmarshalled successfully, txid : %v", txid))
-		
+
 	if updateLimitOfferStatus.LimitOfferID == "" {
 		utils.Logger.Error(fmt.Sprintf("limit offer id is missing, txid : %v", txid))
 		errMessage := "limit_offer_id field is missing"
@@ -207,11 +207,11 @@ func validateUpdateLimitOfferStatusInput(ctx *gin.Context, txid string){
 		return
 	}
 
-	switch updateLimitOfferStatus.Status{
+	switch updateLimitOfferStatus.Status {
 	case string(models.Accepted), string(models.Rejected):
 	default:
 		utils.Logger.Error(fmt.Sprintf("invalid status is provided, txid : %v", txid))
-			
+
 		errMessage := "received status is not supported"
 		utils.RespondWithError(ctx, http.StatusBadRequest, errMessage)
 		return

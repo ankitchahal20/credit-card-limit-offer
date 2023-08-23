@@ -30,7 +30,7 @@ func CreateAccount() func(ctx *gin.Context) {
 			}
 
 			ctx.JSON(http.StatusOK, map[string]string{
-				"account_id": createdAccount.AccountID,
+				"account_id":  createdAccount.AccountID,
 				"customer_id": createdAccount.CustomerID,
 			})
 
@@ -43,11 +43,11 @@ func CreateAccount() func(ctx *gin.Context) {
 
 func (service *CreditCardLimitOfferService) createAccount(ctx *gin.Context, accountInfo models.Account) (models.Account, *limitoffererror.CreditCardError) {
 	txid := ctx.Request.Header.Get(constants.TransactionID)
-	
+
 	// check if per transaction limit is greater than account limit
 	if *accountInfo.PerTransactionLimit > *accountInfo.AccountLimit {
 		utils.Logger.Info(fmt.Sprintf("per transaction limit can not be greater than account limit, txid : %v", txid))
-		return models.Account{},  &limitoffererror.CreditCardError{
+		return models.Account{}, &limitoffererror.CreditCardError{
 			Code:    http.StatusBadRequest,
 			Message: "per transaction limit can not be greater than account limit",
 			Trace:   txid,
@@ -59,7 +59,7 @@ func (service *CreditCardLimitOfferService) createAccount(ctx *gin.Context, acco
 	customerID := uuid.New().String()
 	accountInfo.AccountID = accountID
 	accountInfo.CustomerID = customerID
-	
+
 	// set the current time as accountCreationTime and AccountLimitUpdateTime in the accountInfo
 	accountCreationTime := time.Now().UTC()
 	accountInfo.AccountLimitUpdateTime = accountCreationTime
@@ -74,7 +74,6 @@ func (service *CreditCardLimitOfferService) createAccount(ctx *gin.Context, acco
 
 	return accountInfo, nil
 }
-
 
 // This function is responsible to get a specific account based on accountid
 func GetAccount() func(ctx *gin.Context) {
@@ -96,7 +95,7 @@ func GetAccount() func(ctx *gin.Context) {
 
 func (service *CreditCardLimitOfferService) getAccount(ctx *gin.Context, accountID string) (models.Account, *limitoffererror.CreditCardError) {
 	txid := ctx.Request.Header.Get(constants.TransactionID)
-	
+
 	utils.Logger.Info(fmt.Sprintf("calling db layer for getting %v account, txid : %v", accountID, txid))
 	fetchedAccount, err := service.repo.GetAccount(ctx, accountID)
 	if err != nil {

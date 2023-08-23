@@ -27,10 +27,10 @@ func TestValidateCreateAccountRequestInput(t *testing.T) {
 	// Case 1 : account_limit missing
 	requestFields := models.Account{
 		//AccountLimit: &accountLimit,
-		PerTransactionLimit: &perTransactionLimit,
-		LastAccountLimit: &lastAccountLimit,
-		LastPerTransactionLimit: &lastPerTransactionLimit,
-		AccountLimitUpdateTime: time.Now().UTC(),
+		PerTransactionLimit:           &perTransactionLimit,
+		LastAccountLimit:              &lastAccountLimit,
+		LastPerTransactionLimit:       &lastPerTransactionLimit,
+		AccountLimitUpdateTime:        time.Now().UTC(),
 		PerTransactionLimitUpdateTime: time.Now().UTC(),
 	}
 
@@ -48,9 +48,9 @@ func TestValidateCreateAccountRequestInput(t *testing.T) {
 	requestFields = models.Account{
 		AccountLimit: &accountLimit,
 		//PerTransactionLimit: &perTransactionLimit,
-		LastAccountLimit: &lastAccountLimit,
-		LastPerTransactionLimit: &lastPerTransactionLimit,
-		AccountLimitUpdateTime: time.Now().UTC(),
+		LastAccountLimit:              &lastAccountLimit,
+		LastPerTransactionLimit:       &lastPerTransactionLimit,
+		AccountLimitUpdateTime:        time.Now().UTC(),
 		PerTransactionLimitUpdateTime: time.Now().UTC(),
 	}
 
@@ -66,11 +66,11 @@ func TestValidateCreateAccountRequestInput(t *testing.T) {
 
 	// Case 3 : last_account_limit missing
 	requestFields = models.Account{
-		AccountLimit: &accountLimit,
+		AccountLimit:        &accountLimit,
 		PerTransactionLimit: &perTransactionLimit,
 		//LastAccountLimit: &lastAccountLimit,
-		LastPerTransactionLimit: &lastPerTransactionLimit,
-		AccountLimitUpdateTime: time.Now().UTC(),
+		LastPerTransactionLimit:       &lastPerTransactionLimit,
+		AccountLimitUpdateTime:        time.Now().UTC(),
 		PerTransactionLimitUpdateTime: time.Now().UTC(),
 	}
 
@@ -86,11 +86,11 @@ func TestValidateCreateAccountRequestInput(t *testing.T) {
 
 	// Case 4 : last_per_transaction_limit missing
 	requestFields = models.Account{
-		AccountLimit: &accountLimit,
+		AccountLimit:        &accountLimit,
 		PerTransactionLimit: &perTransactionLimit,
-		LastAccountLimit: &lastAccountLimit,
+		LastAccountLimit:    &lastAccountLimit,
 		//LastPerTransactionLimit: &lastPerTransactionLimit,
-		AccountLimitUpdateTime: time.Now().UTC(),
+		AccountLimitUpdateTime:        time.Now().UTC(),
 		PerTransactionLimitUpdateTime: time.Now().UTC(),
 	}
 
@@ -128,7 +128,6 @@ func TestValidateGetAccountRequestInput(t *testing.T) {
 	r.ServeHTTP(w, ctx.Request)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
-
 	// case 2 : sending empty account_id
 	ctx.Request = httptest.NewRequest(http.MethodGet, "/v1/get_account/", nil)
 	ctx.Request.Header.Add(constants.ContentType, "application/json")
@@ -150,14 +149,14 @@ func TestValidateCreateLimitOfferRequestInput(t *testing.T) {
 	newLimit := 5000
 	offerActivationTime := time.Now().UTC()
 	OfferExpiryTime := time.Now().Add(500).UTC()
-	
+
 	limtOffer := models.LimitOffer{
 		ID: "74edf2ad-7ee8-45f7-a7d2-7a3287c33ffe",
 		//AccountID: &accountID,
-		LimitType: &accountLimit,
-		NewLimit: &newLimit,
+		LimitType:           &accountLimit,
+		NewLimit:            &newLimit,
 		OfferActivationTime: &offerActivationTime,
-		OfferExpiryTime: &OfferExpiryTime,
+		OfferExpiryTime:     &OfferExpiryTime,
 	}
 
 	// case 1 : account_id missing
@@ -173,12 +172,12 @@ func TestValidateCreateLimitOfferRequestInput(t *testing.T) {
 
 	// case 2 : limit_type missing
 	limtOffer = models.LimitOffer{
-		ID: "74edf2ad-7ee8-45f7-a7d2-7a3287c33ffe",
+		ID:        "74edf2ad-7ee8-45f7-a7d2-7a3287c33ffe",
 		AccountID: &accountID,
 		//LimitType: &accountLimit,
-		NewLimit: &newLimit,
+		NewLimit:            &newLimit,
 		OfferActivationTime: &offerActivationTime,
-		OfferExpiryTime: &OfferExpiryTime,
+		OfferExpiryTime:     &OfferExpiryTime,
 	}
 
 	jsonValue, _ = json.Marshal(limtOffer)
@@ -191,12 +190,12 @@ func TestValidateCreateLimitOfferRequestInput(t *testing.T) {
 
 	// case 3 : new_limit missing
 	limtOffer = models.LimitOffer{
-		ID: "74edf2ad-7ee8-45f7-a7d2-7a3287c33ffe",
+		ID:        "74edf2ad-7ee8-45f7-a7d2-7a3287c33ffe",
 		AccountID: &accountID,
 		LimitType: &accountLimit,
 		//NewLimit: &newLimit,
 		OfferActivationTime: &offerActivationTime,
-		OfferExpiryTime: &OfferExpiryTime,
+		OfferExpiryTime:     &OfferExpiryTime,
 	}
 
 	jsonValue, _ = json.Marshal(limtOffer)
@@ -209,10 +208,10 @@ func TestValidateCreateLimitOfferRequestInput(t *testing.T) {
 
 	// case 4 : offer_activation_time missing
 	limtOffer = models.LimitOffer{
-		ID: "74edf2ad-7ee8-45f7-a7d2-7a3287c33ffe",
+		ID:        "74edf2ad-7ee8-45f7-a7d2-7a3287c33ffe",
 		AccountID: &accountID,
 		LimitType: &accountLimit,
-		NewLimit: &newLimit,
+		NewLimit:  &newLimit,
 		//OfferActivationTime: &offerActivationTime,
 		OfferExpiryTime: &OfferExpiryTime,
 	}
@@ -227,10 +226,10 @@ func TestValidateCreateLimitOfferRequestInput(t *testing.T) {
 
 	// case 4 : offer_expiry_time missing
 	limtOffer = models.LimitOffer{
-		ID: "74edf2ad-7ee8-45f7-a7d2-7a3287c33ffe",
-		AccountID: &accountID,
-		LimitType: &accountLimit,
-		NewLimit: &newLimit,
+		ID:                  "74edf2ad-7ee8-45f7-a7d2-7a3287c33ffe",
+		AccountID:           &accountID,
+		LimitType:           &accountLimit,
+		NewLimit:            &newLimit,
 		OfferActivationTime: &offerActivationTime,
 		//OfferExpiryTime: &OfferExpiryTime,
 	}
@@ -247,12 +246,12 @@ func TestValidateCreateLimitOfferRequestInput(t *testing.T) {
 	today := time.Now().UTC()
 	OfferExpiryTime = today.AddDate(0, 0, -1)
 	limtOffer = models.LimitOffer{
-		ID: "74edf2ad-7ee8-45f7-a7d2-7a3287c33ffe",
-		AccountID: &accountID,
-		LimitType: &accountLimit,
-		NewLimit: &newLimit,
+		ID:                  "74edf2ad-7ee8-45f7-a7d2-7a3287c33ffe",
+		AccountID:           &accountID,
+		LimitType:           &accountLimit,
+		NewLimit:            &newLimit,
 		OfferActivationTime: &offerActivationTime,
-		OfferExpiryTime: &OfferExpiryTime,
+		OfferExpiryTime:     &OfferExpiryTime,
 	}
 
 	jsonValue, _ = json.Marshal(limtOffer)
@@ -283,7 +282,7 @@ func TestValidateListActiveLimitOffersRequestInput(t *testing.T) {
 	e.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
-	// case 2 : invalid uuid as accountID 
+	// case 2 : invalid uuid as accountID
 
 	accountID := "f83513e1-f0cb-4a49-85e4-"
 	activeLimitOffer = models.ActiveLimitOffer{
@@ -322,7 +321,7 @@ func TestValidateUpdateLimitOfferStatusRequestInput(t *testing.T) {
 	// case 2 : some status is missing
 	updateLimitOfferStatus = models.UpdateLimitOfferStatus{
 		LimitOfferID: limitOfferID,
-	}	
+	}
 	jsonValue, _ = json.Marshal(updateLimitOfferStatus)
 
 	req, _ = http.NewRequest(http.MethodPost, "/v1/update_limit_offer_status", bytes.NewBuffer(jsonValue))
@@ -334,8 +333,8 @@ func TestValidateUpdateLimitOfferStatusRequestInput(t *testing.T) {
 	// case 2 : some random status is sent
 	updateLimitOfferStatus = models.UpdateLimitOfferStatus{
 		LimitOfferID: limitOfferID,
-		Status: "some-non-sense-status",
-	}	
+		Status:       "some-non-sense-status",
+	}
 	jsonValue, _ = json.Marshal(updateLimitOfferStatus)
 
 	req, _ = http.NewRequest(http.MethodPost, "/v1/update_limit_offer_status", bytes.NewBuffer(jsonValue))

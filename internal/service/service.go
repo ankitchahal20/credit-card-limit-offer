@@ -9,7 +9,7 @@ import (
 
 var (
 	creditCardLimitOfferClient *CreditCardLimitOfferService
-	once sync.Once
+	once                       sync.Once
 )
 
 type CreditCardLimitOfferService struct {
@@ -21,12 +21,12 @@ func NewCreditCardLimitOfferService(conn db.CreditCardLimitOfferService) *Credit
 	if creditCardLimitOfferClient == nil {
 		once.Do(
 			func() {
-			creditCardLimitOfferClient = &CreditCardLimitOfferService{
-				repo: conn,
-			}
-		})
+				creditCardLimitOfferClient = &CreditCardLimitOfferService{
+					repo: conn,
+				}
+			})
 	} else {
-        utils.Logger.Info("creditCardLimitOfferClient is alredy created")
-    }
+		utils.Logger.Info("creditCardLimitOfferClient is alredy created")
+	}
 	return creditCardLimitOfferClient
 }

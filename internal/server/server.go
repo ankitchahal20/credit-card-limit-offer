@@ -46,7 +46,7 @@ func Start() {
 	plainHandler := gin.New()
 
 	creditCardHandler := plainHandler.Group(constants.ForwardSlash + constants.Version).Use(gin.Recovery()).
-	Use(middleware.ValidateInputRequest())
+		Use(middleware.ValidateInputRequest())
 	registerCreateAccountEndPoints(creditCardHandler)
 	registerGetAccountEndPoints(creditCardHandler)
 	registerCreateLimitOfferEndpoints(creditCardHandler)

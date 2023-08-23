@@ -43,7 +43,7 @@ func CreateLimitOffer() func(ctx *gin.Context) {
 func (service *CreditCardLimitOfferService) createLimitOffer(ctx *gin.Context, limitOffer models.LimitOffer) (string, *limitoffererror.CreditCardError) {
 	txid := ctx.Request.Header.Get(constants.TransactionID)
 	utils.Logger.Info(fmt.Sprintf("calling db layer for fetching account %v info to get the existing limit, txid : %v", limitOffer.AccountID, txid))
-	
+
 	fetchedAccount, err := service.repo.GetAccount(ctx, *limitOffer.AccountID)
 	if err != nil {
 		return constants.EmptyString, err
@@ -52,14 +52,14 @@ func (service *CreditCardLimitOfferService) createLimitOffer(ctx *gin.Context, l
 	if err != nil {
 		return constants.EmptyString, err
 	}
-	fmt.Println("isLimitOfferExsits : ",isLimitOfferExsits)
+	fmt.Println("isLimitOfferExsits : ", isLimitOfferExsits)
 	var currentLimit int
 	if *limitOffer.LimitType == models.AccountLimit {
 		currentLimit = *fetchedAccount.AccountLimit
 	} else if *limitOffer.LimitType == models.PerTransactionLimit {
 		currentLimit = *fetchedAccount.PerTransactionLimit
 	}
-	fmt.Println("*limitOffer.NewLimit <= currentLimit ", *limitOffer.NewLimit , ": ", currentLimit)
+	fmt.Println("*limitOffer.NewLimit <= currentLimit ", *limitOffer.NewLimit, ": ", currentLimit)
 	if *limitOffer.NewLimit <= currentLimit {
 		return constants.EmptyString, &limitoffererror.CreditCardError{
 			Code:    http.StatusBadRequest,
@@ -102,7 +102,7 @@ func ListActiveLimitOffers() func(ctx *gin.Context) {
 				utils.RespondWithError(ctx, err.Code, err.Message)
 				return
 			}
-		
+
 			ctx.JSON(http.StatusOK, activeLimitOffers)
 
 			ctx.Writer.WriteHeader(http.StatusOK)
@@ -114,7 +114,7 @@ func ListActiveLimitOffers() func(ctx *gin.Context) {
 
 func (service *CreditCardLimitOfferService) listActiveLimitOffers(ctx *gin.Context, activeLimitOffer models.ActiveLimitOffer) ([]models.LimitOffer, *limitoffererror.CreditCardError) {
 	txid := ctx.Request.Header.Get(constants.TransactionID)
-	
+
 	if activeLimitOffer.ActiveDate == nil {
 		time := time.Now().UTC()
 		activeLimitOffer.ActiveDate = &time
@@ -144,7 +144,7 @@ func UpdateLimitOfferStatus() func(ctx *gin.Context) {
 				utils.RespondWithError(ctx, err.Code, err.Message)
 				return
 			}
-		
+
 			ctx.JSON(http.StatusOK, nil)
 			ctx.Writer.WriteHeader(http.StatusOK)
 		} else {
