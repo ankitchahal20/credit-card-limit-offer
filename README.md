@@ -56,20 +56,16 @@ curl -i -k -X POST \
 Get Account API
 
 ```
-curl -i -k -X POST \
-  http://localhost:8080/v1/login \
+curl -i -k -X GET \
+  http://localhost:8080/v1/get_account/<account-id> \
   -H "transaction-id: 288a59c1-b826-42f7-a3cd-bf2911a5c351" \
-  -H "content-type: application/json" \
-  -d '{
-"email": "abcd11@gmail.com",
-"password": "12345"
-}'
+  -H "content-type: application/json"
 ```
 
 Create Limit Offer API
 
 ```
-curl -i -k -X GET \
+curl -i -k -X POST \
   http://localhost:8080/v1/create_limit_offer \
   -H "transaction-id: 288a59c1-b826-42f7-a3cd-bf2911a5c351" \
   -H "content-type: application/json" \
